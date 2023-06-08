@@ -32,8 +32,13 @@ h1 {
     cursor: pointer;
 }
 
+.box.disabled {
+    background-color: rgb(40,40,40);
+    cursor: default;
+}
+
 .box.disabled:hover {
-    background-color: rgb(60,60,60);
+    background-color: rgb(40,40,40);
     cursor: default;
 }
 
@@ -79,6 +84,7 @@ button:hover {
 
 .controls {
     min-height: 100px;
+    display: flex;
 }
 
 #again-btn, #add-credits-btn {
@@ -87,4 +93,8 @@ button:hover {
 
 #message {
     padding: 16px;
+}
+
+#turn-box, #credits-box {
+    display: none;
 }

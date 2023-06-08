@@ -9,8 +9,8 @@
     <div class="container">
         <h1>Tic Tac Toe Game</h1>
         <div class="game">
-            <div class="credits">
-                <span id="credits-text"></span>
+            <div id="credits-box">
+                <span id="credits-text">Credits: </span>
                 <span id="credits-amount"></span>
             </div>
             <div class="controls">
@@ -35,8 +35,8 @@
                     <div class="box bottom right" data-id="8"></div>
                 </div>
             </div>
-            <div class="turn-box">
-                <span id="turn-text"></span>
+            <div id="turn-box">
+                <span id="turn-text">Turn: </span>
                 <span id="turn"></span>
             </div>
             <div id="message"></div>
@@ -50,20 +50,111 @@
 
         const gameBoard = document.getElementById('board');
         const boxes = document.getElementsByClassName('box');
-        const creditsText = document.getElementById('credits-text');
-        const turnText = document.getElementById('turn-text');
+        const creditsBox = document.getElementById('credits-box');
+        const turnBox = document.getElementById('turn-box');
         const startGameButton = document.getElementById('start-btn');
         const playAgainButton = document.getElementById('again-btn');
         const addCreditsButton = document.getElementById('add-credits-btn');
 
-        const updateTextContent = (field, value) => {
+        const updateText = (field, value) => {
             document.getElementById(field).textContent = value;
+        };
+
+        const updateBoard = (data) => {
+            for (var i = 0; i < data.board.length; i++) {
+                boxes[i].textContent = data.board[i];
+            }
+        };
+
+        const updateSessionState = (data) => {
+            if (data.message) {
+                updateText('message', data.message);
+            };
+            if (data.credits) {
+                updateText('credits-amount', data.credits);
+            };
+            if (data.board) {
+                updateBoard(data);
+            };
+        };
+
+        const showElement = (element) => {
+            element.style.display = 'block';
+        };
+
+        const hideElement = (element) => {
+            element.style.display = 'none';
+        };
+
+
+        socket.on('connected', function(data) {
+            updateSessionState(data);
+            showElement(creditsBox);
+        });
+
+        socket.on('game_started', function(data) {
+            hideElement(startGameButton);
+            updateSessionState(data);
+            showElement(gameBoard);
+        });
+
+        socket.on('playing_again', function(data) {
+            hideElement(playAgainButton);
+            hideElement(addCreditsButton);
+            updateSessionState(data);
+        });
+
+        socket.on('game_ended', function(data) {
+            updateSessionState(data);
+            showElement(playAgainButton);
+            showElement(addCreditsButton);
+        });
+
+        socket.on('state_updated', function(data) {
+            updateSessionState(data);
+            unlockCells();
+        });
+
+        socket.on('state_updated_no_unlock', function(data) {
+            updateSessionState(data);
+        });
+
+        startGameButton.addEventListener('click', function() {
+            lockCells();
+            socket.emit('start_game');
+        });
+
+        playAgainButton.addEventListener('click', function() {
+            lockCells();
+            socket.emit('play_again');
+        });
+
+        addCreditsButton.addEventListener('click', function() {
+            socket.emit('add_credits');
+        });
+
+
+        const lockCells = function() {
+            for (box of boxes)
+            {
+                box.classList.add('disabled');
+            }
+        };
+
+        const unlockCells = function() {
+            for (box of boxes)
+            {
+                if (box.textContent === '') {
+                    box.classList.remove('disabled');
+                }
+            }
         };
 
         const markCell = function() {
             if (!this.classList.contains('disabled')) {
-            const id = this.getAttribute('data-id');
-            socket.emit('validate_move', id, turn);
+                lockCells();
+                const id = this.getAttribute('data-id');
+                socket.emit('validate_move', id);
             };
         };
 
@@ -71,72 +162,6 @@
         {
             box.addEventListener('click', markCell);
         }
-
-        socket.on('connected', function(data) {
-            creditsText.textContent = 'Credits: '
-            updateTextContent('credits-amount', data.credits);
-        });
-
-        socket.on('move_validated', function(data) {
-            if (data.winner_fields) {
-                for (box of boxes) {
-                    box.classList.add('disabled');
-                };
-                playAgainButton.style.display = 'block';
-                updateTextContent('message', 'The winner is ' + data.winner);
-            };
-            boxes[data.box_id].textContent = turn;
-            boxes[data.box_id].classList.add('disabled');
-            socket.emit('opponent_move');
-        });
-
-        socket.on('game_started', function(data) {
-            startGameButton.style.display = 'none';
-            gameBoard.style.display = 'block';
-            turn = data.turn;
-            updateTextContent('turn-text', 'Turn: ');
-            updateTextContent('credits-amount', data.credits);
-            updateTextContent('message', data.message);
-
-        });
-
-        socket.on('playing_again', function(data) {
-            playAgainButton.style.display = 'none';
-            updateTextContent('credits-amount', data.credits);
-            updateTextContent('message', data.message);
-
-            for (let i = 0; i < boxes.length; i++) {
-              boxes[i].textContent = '';
-              boxes[i].classList.remove('disabled');
-            }
-
-        });
-
-        socket.on('credits_added', function(data) {
-            updateTextContent('credits-amount', data.credits);
-        });
-
-        socket.on('opponent_moved', function(data) {
-            boxes[data.id].textContent = 'O';
-            boxes[data.id].classList.add('disabled');
-        });
-
-        socket.on('action_failed', function(data) {
-            updateTextContent('message', data.message);
-        });
-
-
-        startGameButton.addEventListener('click', function() {
-            socket.emit('start_game');
-        });
-
-        playAgainButton.addEventListener('click', function() {
-            socket.emit('play_again');
-        });
-
-        addCreditsButton.addEventListener('click', function() {
-            socket.emit('add_credits');
-        });
 
     </script>
 </body>

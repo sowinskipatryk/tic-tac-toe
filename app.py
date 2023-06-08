@@ -12,50 +12,73 @@ app.secret_key = app_secret_key
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
+PLAYER_SYMBOL = 'X'
+OPPONENT_SYMBOL = 'O'
 
-def determine_starting_player():
+
+def is_opponents_turn():
     random_num = random.random()
     if random_num < 0.5:
-        return 'X'
-    return 'O'
+        return True
 
 
-def opponent_move():
+def opponents_move():
+    emit('state_updated_no_unlock', {'message': 'Opponent\'s move'})
+    time.sleep(2)
     empty_field_ids = [index for index, value in enumerate(session['board']) if value == '']
-    return random.choice(empty_field_ids)
+    chosen_id = random.choice(empty_field_ids)
+    session['board'][chosen_id] = OPPONENT_SYMBOL
+
+    if is_winner():
+        if 0 < session['credits'] < 3:
+            session['time'] = time.time() - session['time']
+            print(session['time'])
+            emit('game_ended', {'board': session['board'], 'message': 'Opponent won. Game over!', 'credits': session['credits']})
+        else:
+            emit('game_ended', {'board': session['board'], 'message': 'Opponent won', 'credits': session['credits']})
+    elif is_draw():
+        emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+    else:
+        emit('state_updated', {'board': session['board'], 'message': 'Your move'})
 
 
-def game_reset():
+def game_init():
+    session['credits'] -= 3
     session['board'] = ['' for _ in range(9)]
-    session['winner_fields'] = None
-    session['winner'] = None
+    emit('game_started', {'message': 'Game has started', 'credits': session['credits'], 'board': session['board']})
+
+    if is_opponents_turn():
+        opponents_move()
+    else:
+        emit('state_updated', {'board': session['board'], 'message': 'Your move'})
 
 
-def game_over_check():
+def is_winner():
     for x in range(0, 9, 3):
         if session['board'][x] != '' and session['board'][x] == session['board'][x+1] == session['board'][x+2]:
-            session['winner'] = session['board'][x]
-            session['winner_fields'] = x, x+1, x+2
+            return True
 
     for x in range(3):
         if session['board'][x] != '' and session['board'][x] == session['board'][x+3] == session['board'][x+6]:
-            session['winner'] = session['board'][x]
-            session['winner_fields'] = x, x+3, x+6
+            return True
 
     if session['board'][0] != '' and session['board'][0] == session['board'][4] == session['board'][8]:
-        session['winner'] = session['board'][0]
-        session['winner_fields'] = 0, 4, 7
+        return True
 
     if session['board'][2] != '' and session['board'][2] == session['board'][4] == session['board'][6]:
-        session['winner'] = session['board'][2]
-        session['winner_fields'] = 2, 4, 6
+        return True
+
+
+def is_draw():
+    if all(value != "" for value in session['board']):
+        return True
 
 
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
     session['player_id'] = str(uuid.uuid4())
-    session['credits'] = 10
+    session['credits'] = 4
     emit('connected', {'player_id': session['player_id'], 'credits': session['credits']})
 
 
@@ -66,73 +89,53 @@ def handle_disconnect():
 
 @socketio.on('start_game')
 def handle_start_game():
-    print('Game started')
-    session['credits'] -= 3
-
-    game_reset()
-
-    session['turn'] = determine_starting_player()
-    if session['turn'] == 'O':
-        chosen_field_id = opponent_move()
-        session['board'][chosen_field_id] = 'O'
-        session['turn'] = 'X'
-
-    emit('game_started', {'message': 'Game has started',
-                          'credits': session['credits'],
-                          'board': session['board'],
-                          'turn': session['turn']})
+    session['time'] = time.time()
+    game_init()
 
 
 @socketio.on('play_again')
 def handle_play_again():
     if session['credits'] == 0:
-        emit('action_failed', {'message': 'Add more credits to continue playing'})
+        emit('state_updated_no_unlock', {'message': 'Add more credits to continue playing'})
     elif 0 < session['credits'] < 3:
-        emit('action_failed', {'message': 'Insufficient credits to start another game'})
+        emit('state_updated_no_unlock', {'message': 'Insufficient credits to start another game'})
     else:
-        session['credits'] -= 3
-        game_reset()
-        emit('playing_again', {'message': 'Another game has started', 'credits': session['credits']})
+        emit('game_started', {'message': 'Another game has started', 'credits': session['credits'], 'board': session['board']})
+        game_init()
 
 
 @socketio.on('add_credits')
 def handle_add_credits():
-    if 0 < session['credits'] < 3:
+    if session['credits'] == 0:
         session['credits'] += 10
-        emit('credits_added', {'message': 'Credits has been added', 'credits': session['credits']})
+        emit('state_updated_no_unlock', {'message': 'Extra credits have been added', 'credits': session['credits']})
     else:
-        emit('action_failed', {'message': 'You cannot add more credits'})
+        emit('state_updated_no_unlock', {'message': 'You cannot add more credits'})
 
 
 @socketio.on('validate_move')
-def handle_validate_move(box_id, turn):
-    print('Validating move:', box_id, turn)
+def handle_validate_move(box_id):
     box_id = int(box_id)
     if session['board'][box_id] == '':
-        session['board'][box_id] = turn
+        session['board'][box_id] = PLAYER_SYMBOL
 
-        game_over_check()
+        emit('state_updated_no_unlock', {'board': session['board']})
 
-        emit('move_validated', {'box_id': box_id,
-                                'winner_fields': session['winner_fields'],
-                                'winner': session['winner']})
+        if is_winner():
+            session['credits'] += 4
+            emit('game_ended', {'board': session['board'], 'message': 'You won', 'credits': session['credits']})
+        elif is_draw():
+            if 0 < session['credits'] < 3:
+                session['time'] = time.time() - session['time']
+                print(session['time'])
+                emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
+            else:
+                emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+        else:
+            opponents_move()
+
     else:
-        emit('action_failed', {'message': 'Wrong move, try another field'})
-
-
-@socketio.on('opponent_move')
-def handle_opponent_move():
-    time.sleep(2)
-    chosen_field_id = opponent_move()
-    session['board'][chosen_field_id] = 'O'
-    session['turn'] = 'X'
-    emit('opponent_moved', {'turn': session['turn'], 'id': chosen_field_id})
-
-
-@socketio.on('round_win')
-def handle_round_win():
-    session['credits'] += 4
-    emit('round_won', {'message': 'You won!', 'credits': session['credits']})
+        emit('state_updated', {'message': 'Wrong move, try another field'})
 
 
 @app.route('/')
