@@ -70,7 +70,7 @@
             if (data.message) {
                 updateText('message', data.message);
             };
-            if (data.credits) {
+            if (data.credits !== undefined) {
                 updateText('credits-amount', data.credits);
             };
             if (data.board) {
@@ -85,54 +85,6 @@
         const hideElement = (element) => {
             element.style.display = 'none';
         };
-
-
-        socket.on('connected', function(data) {
-            updateSessionState(data);
-            showElement(creditsBox);
-        });
-
-        socket.on('game_started', function(data) {
-            hideElement(startGameButton);
-            updateSessionState(data);
-            showElement(gameBoard);
-        });
-
-        socket.on('playing_again', function(data) {
-            hideElement(playAgainButton);
-            hideElement(addCreditsButton);
-            updateSessionState(data);
-        });
-
-        socket.on('game_ended', function(data) {
-            updateSessionState(data);
-            showElement(playAgainButton);
-            showElement(addCreditsButton);
-        });
-
-        socket.on('state_updated', function(data) {
-            updateSessionState(data);
-            unlockCells();
-        });
-
-        socket.on('state_updated_no_unlock', function(data) {
-            updateSessionState(data);
-        });
-
-        startGameButton.addEventListener('click', function() {
-            lockCells();
-            socket.emit('start_game');
-        });
-
-        playAgainButton.addEventListener('click', function() {
-            lockCells();
-            socket.emit('play_again');
-        });
-
-        addCreditsButton.addEventListener('click', function() {
-            socket.emit('add_credits');
-        });
-
 
         const lockCells = function() {
             for (box of boxes)
@@ -158,10 +110,97 @@
             };
         };
 
+        const drawLines = function() {
+            console.log(boxes);
+            for (let x = 0; x < 9; x += 3) {
+                if (boxes[x].textContent !== '' && boxes[x].textContent === boxes[x+1].textContent && boxes[x+1].textContent === boxes[x+2].textContent) {
+                    boxes[x].classList.add('horizontal');
+                    boxes[x+1].classList.add('horizontal');
+                    boxes[x+2].classList.add('horizontal');
+                };
+            };
+
+            for (let x = 0; x < 3; x++) {
+                if (boxes[x].textContent !== '' && boxes[x].textContent === boxes[x+3].textContent && boxes[x+3].textContent === boxes[x+6].textContent) {
+                    boxes[x].classList.add('vertical');
+                    boxes[x+3].classList.add('vertical');
+                    boxes[x+6].classList.add('vertical');
+                };
+            };
+
+            if (boxes[0].textContent !== '' && boxes[0].textContent === boxes[4].textContent && boxes[4].textContent === boxes[8].textContent) {
+                boxes[0].classList.add('diagonal-left');
+                boxes[4].classList.add('diagonal-left');
+                boxes[8].classList.add('diagonal-left');
+            };
+
+            if (boxes[2].textContent !== '' && boxes[2].textContent === boxes[4].textContent && boxes[4].textContent === boxes[6].textContent) {
+                boxes[2].classList.add('diagonal-right');
+                boxes[4].classList.add('diagonal-right');
+                boxes[6].classList.add('diagonal-right');
+            };
+        };
+
+        const clearLines = function() {
+            for (box of boxes) {
+                box.classList.remove('horizontal');
+                box.classList.remove('vertical');
+                box.classList.remove('diagonal-left');
+                box.classList.remove('diagonal-right');
+            }
+        };
+
         for (box of boxes)
         {
             box.addEventListener('click', markCell);
         }
+
+        socket.on('connected', function(data) {
+            updateSessionState(data);
+            showElement(creditsBox);
+        });
+
+        socket.on('game_started', function(data) {
+            hideElement(startGameButton);
+            updateSessionState(data);
+            showElement(gameBoard);
+        });
+
+        socket.on('playing_again', function(data) {
+            hideElement(playAgainButton);
+            hideElement(addCreditsButton);
+            clearLines();
+            updateSessionState(data);
+        });
+
+        socket.on('game_ended', function(data) {
+            updateSessionState(data);
+            drawLines();
+            showElement(playAgainButton);
+            showElement(addCreditsButton);
+        });
+
+        socket.on('state_updated', function(data) {
+            updateSessionState(data);
+            console.log(data);
+            if (data.unlock) {
+                unlockCells();
+            };
+        });
+
+        startGameButton.addEventListener('click', function() {
+            lockCells();
+            socket.emit('start_game');
+        });
+
+        playAgainButton.addEventListener('click', function() {
+            lockCells();
+            socket.emit('play_again');
+        });
+
+        addCreditsButton.addEventListener('click', function() {
+            socket.emit('add_credits');
+        });
 
     </script>
 </body>

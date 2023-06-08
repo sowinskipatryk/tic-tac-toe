@@ -20,6 +20,7 @@ h1 {
     background-color: rgb(60,60,60);
     width: 100px;
     height: 100px;
+    position: relative;
     border: rgb(30,30,30);
     display: flex;
     align-items: center;
@@ -33,12 +34,12 @@ h1 {
 }
 
 .box.disabled {
-    background-color: rgb(40,40,40);
+    background-color: rgb(50,50,50);
     cursor: default;
 }
 
 .box.disabled:hover {
-    background-color: rgb(40,40,40);
+    background-color: rgb(50,50,50);
     cursor: default;
 }
 
@@ -83,7 +84,7 @@ button:hover {
 }
 
 .controls {
-    min-height: 100px;
+    min-height: 120px;
     display: flex;
 }
 
@@ -97,4 +98,39 @@ button:hover {
 
 #turn-box, #credits-box {
     display: none;
+}
+
+.box.diagonal-left::before {
+  content: "";
+  width: 180%;
+  position: absolute;
+  height: 2px;
+  background-color: white;
+  transform: rotate(-135deg);
+}
+
+.box.diagonal-right::before {
+  content: "";
+  width: 180%;
+  position: absolute;
+  height: 2px;
+  background-color: white;
+  transform: rotate(-45deg);
+}
+
+.box.horizontal::before {
+  content: "";
+  width: 140%;
+  height: 2px;
+  position: absolute;
+  background-color: white;
+}
+
+.box.vertical::before {
+  content: "";
+  width: 120%;
+  height: 2px;
+  position: absolute;
+  background-color: white;
+  transform: rotate(-90deg);
 }
