@@ -100,7 +100,10 @@ button:hover {
     display: none;
 }
 
-.box.diagonal-left::before {
+.box.diagonal-left::before,
+.box.diagonal-left.diagonal-right::before,
+.box.horizontal.diagonal-left::after,
+.box.vertical.diagonal-left::after {
   content: "";
   width: 180%;
   position: absolute;
@@ -109,7 +112,10 @@ button:hover {
   transform: rotate(-135deg);
 }
 
-.box.diagonal-right::before {
+.box.diagonal-right::before,
+.box.diagonal-left.diagonal-right::after,
+.box.horizontal.diagonal-right::after,
+.box.vertical.diagonal-right::after {
   content: "";
   width: 180%;
   position: absolute;
@@ -118,15 +124,22 @@ button:hover {
   transform: rotate(-45deg);
 }
 
-.box.horizontal::before {
+.box.horizontal::before,
+.box.horizontal.diagonal-left::before,
+.box.horizontal.diagonal-right::before,
+.box.vertical.horizontal::after {
   content: "";
   width: 140%;
   height: 2px;
   position: absolute;
   background-color: white;
+  transform: rotate(0deg);
 }
 
-.box.vertical::before {
+.box.vertical::before,
+.box.vertical.diagonal-left::before,
+.box.vertical.diagonal-right::before,
+.box.vertical.horizontal::before {
   content: "";
   width: 120%;
   height: 2px;

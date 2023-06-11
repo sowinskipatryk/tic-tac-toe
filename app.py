@@ -39,7 +39,7 @@ def opponents_move():
             print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
             emit('game_ended', {'board': session['board'], 'message': 'Opponent won. Game over!', 'credits': session['credits']})
         else:
-            emit('game_ended', {'board': session['board'], 'message': 'Opponent won', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'], 'message': 'Opponent won', 'credits': session['credits']})
     elif is_draw():
         session['draws'] += 1
         if 0 < session['credits'] < 3:
@@ -48,7 +48,7 @@ def opponents_move():
             print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
             emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
         else:
-            emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
     else:
         emit('state_updated', {'board': session['board'], 'message': 'Your move', 'unlock': True})
 
@@ -104,6 +104,7 @@ def handle_disconnect():
 @socketio.on('start_game')
 def handle_start_game():
     print('Handle start game')
+    session['credits'] = 10
     session['wins'] = 0
     session['draws'] = 0
     session['losses'] = 0
@@ -145,7 +146,7 @@ def handle_validate_move(box_id):
         if is_winner():
             session['wins'] += 1
             session['credits'] += 4
-            emit('game_ended', {'board': session['board'], 'message': 'You won', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'], 'message': 'You won', 'credits': session['credits']})
         elif is_draw():
             session['draws'] += 1
             if 0 < session['credits'] < 3:
@@ -154,7 +155,7 @@ def handle_validate_move(box_id):
                 print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
                 emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
             else:
-                emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+                emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
         else:
             opponents_move()
 

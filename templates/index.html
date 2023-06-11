@@ -14,8 +14,8 @@
                 <span id="credits-amount"></span>
             </div>
             <div class="controls">
-            <button id="start-btn">Start Game</button>
-            <button id="again-btn">Play Again</button>
+            <button id="start-btn">Start New Game</button>
+            <button id="again-btn">Next Round</button>
             <button id="add-credits-btn">Add Credits</button>
             </div>
             <div id="board">
@@ -173,11 +173,17 @@
             updateSessionState(data);
         });
 
-        socket.on('game_ended', function(data) {
+        socket.on('round_ended', function(data) {
             updateSessionState(data);
             drawLines();
             showElement(playAgainButton);
             showElement(addCreditsButton);
+        });
+
+        socket.on('game_ended', function(data) {
+            updateSessionState(data);
+            drawLines();
+            showElement(startGameButton);
         });
 
         socket.on('state_updated', function(data) {
