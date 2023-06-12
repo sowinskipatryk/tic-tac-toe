@@ -10,6 +10,7 @@ body {
     height: 100vh;
     box-sizing: border-box;
     overflow: hidden;
+    position: relative;
 }
 
 h1 {
@@ -45,9 +46,14 @@ h1 {
     cursor: default;
 }
 
-.row, .table-row {
+.row {
     display: flex;
     flex-direction: row;
+}
+
+.table-column {
+    display: flex;
+    flex-direction: column;
 }
 
 .cell {
@@ -64,7 +70,6 @@ h1 {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
 }
 
 .box.top {
@@ -84,12 +89,23 @@ h1 {
 }
 
 button {
-    margin: 48px;
-
+    margin: 12px;
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    background-color: rgb(230 205 205);
 }
 
 button:hover {
     cursor: pointer;
+    background-color: rgb(230 205 205);
+}
+
+button:disabled {
+    cursor: default;
+    background-color: rgb(75 50 50);
+    color: black;
+    border-color: black;
 }
 
 #board {
@@ -97,20 +113,26 @@ button:hover {
 }
 
 .controls {
-    min-height: 120px;
     display: flex;
-}
-
-#again-btn, #add-credits-btn {
-    display: none;
+    flex-direction: column;
 }
 
 #message {
     padding: 16px;
 }
 
-#credits-box, #stats-box {
+#credits-box {
     display: none;
+    margin: 24px;
+    text-align: center;
+}
+
+#stats-box {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 24px;
 }
 
 .box.diagonal-left::before,
@@ -164,7 +186,8 @@ button:hover {
 #side-panel {
     position: absolute;
     top: 0;
-    right: 0;
-    width: 300px;
-    background-color: blue;
+    left: 0;
+    height: 100vh;
+    width: 240px;
+    background-color: rgb(95 55 55);
 }

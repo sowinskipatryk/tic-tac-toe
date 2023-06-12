@@ -1,5 +1,6 @@
 from app import db
 from datetime import datetime, timedelta
+import pytz
 
 
 class GameStats(db.Model):
@@ -9,4 +10,4 @@ class GameStats(db.Model):
     draws = db.Column(db.Integer)
     losses = db.Column(db.Integer)
     games_length = db.Column(db.Interval, default=timedelta())
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime(timezone=True), default=datetime.now(pytz.timezone('Europe/Warsaw')))

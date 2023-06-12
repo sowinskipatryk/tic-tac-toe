@@ -14,47 +14,47 @@
             <div class="game">
                 <div id="board">
                     <div class="row">
-                        <div class="box top left" data-id="0"></div>
-                        <div class="box top" data-id="1"></div>
-                        <div class="box top right" data-id="2"></div>
+                        <div class="box top left disabled" data-id="0"></div>
+                        <div class="box top disabled" data-id="1"></div>
+                        <div class="box top right disabled" data-id="2"></div>
                     </div>
                     <div class="row">
-                        <div class="box left" data-id="3"></div>
-                        <div class="box" data-id="4"></div>
-                        <div class="box right" data-id="5"></div>
+                        <div class="box left disabled" data-id="3"></div>
+                        <div class="box disabled" data-id="4"></div>
+                        <div class="box right disabled" data-id="5"></div>
                     </div>
                     <div class="row">
-                        <div class="box bottom left" data-id="6"></div>
-                        <div class="box bottom" data-id="7"></div>
-                        <div class="box bottom right" data-id="8"></div>
+                        <div class="box bottom left disabled" data-id="6"></div>
+                        <div class="box bottom disabled" data-id="7"></div>
+                        <div class="box bottom right disabled" data-id="8"></div>
                     </div>
                 </div>
                 <div id="message"></div>
-                <div id="stats-box">
-                    <div class="table-row">
+                <div id="side-panel">
+                    <div id="credits-box">
+                        <span id="credits-text">Credits: </span>
+                        <span id="credits-amount">10</span>
+                    </div>
+                    <div class="controls">
+                        <button id="start-btn">Start New Game</button>
+                        <button id="again-btn" disabled>Next Round</button>
+                        <button id="add-credits-btn" disabled>Add Credits</button>
+                        <button id="stats-btn">Daily Stats</button>
+                    </div>
+                    <div id="stats-box">
+                    <div class="table-column">
                         <div class="cell" id="header-wins">Wins</div>
                         <div class="cell" id="header-draws">Draws</div>
                         <div class="cell" id="header-losses">Losses</div>
                         <div class="cell" id="header-time">Time Played</div>
                     </div>
-                    <div class="table-row">
+                    <div class="table-column">
                         <div class="cell" id="data-wins"></div>
                         <div class="cell" id="data-draws"></div>
                         <div class="cell" id="data-losses"></div>
                         <div class="cell" id="data-time"></div>
                     </div>
                 </div>
-                <div id="side-panel">
-                    <div id="credits-box">
-                        <span id="credits-text">Credits: </span>
-                        <span id="credits-amount"></span>
-                    </div>
-                    <div class="controls">
-                        <button id="start-btn">Start New Game</button>
-                        <button id="again-btn">Next Round</button>
-                        <button id="add-credits-btn">Add Credits</button>
-                        <button id="stats-btn">Daily Stats</button>
-                    </div>
                 </div>
             </div>
     </div>
@@ -101,12 +101,20 @@
             updateText('data-time', data.total_seconds);
         };
 
-        const showElement = (element) => {
-            element.style.display = 'block';
+        const showElement = (element, display) => {
+            element.style.display = display;
         };
 
         const hideElement = (element) => {
             element.style.display = 'none';
+        };
+
+        const disableButton = (element) => {
+            element.disabled = true;
+        };
+
+        const enableButton = (element) => {
+            element.disabled = false;
         };
 
         const lockCells = function() {
@@ -134,7 +142,6 @@
         };
 
         const drawLines = function() {
-            console.log(boxes);
             for (let x = 0; x < 9; x += 3) {
                 if (boxes[x].textContent !== '' && boxes[x].textContent === boxes[x+1].textContent && boxes[x+1].textContent === boxes[x+2].textContent) {
                     boxes[x].classList.add('horizontal');
@@ -180,19 +187,19 @@
 
         socket.on('connected', function(data) {
             updateSessionState(data);
-            showElement(creditsBox);
+            showElement(creditsBox, 'block');
         });
 
         socket.on('game_started', function(data) {
-            hideElement(startGameButton);
+            disableButton(startGameButton);
             clearLines();
             updateSessionState(data);
-            showElement(gameBoard);
+            showElement(gameBoard, 'block');
         });
 
         socket.on('playing_again', function(data) {
-            hideElement(playAgainButton);
-            hideElement(addCreditsButton);
+            disableButton(playAgainButton);
+            disableButton(addCreditsButton);
             clearLines();
             updateSessionState(data);
         });
@@ -200,14 +207,16 @@
         socket.on('round_ended', function(data) {
             updateSessionState(data);
             drawLines();
-            showElement(playAgainButton);
-            showElement(addCreditsButton);
+            if (data.credits === 0) {
+                enableButton(addCreditsButton);
+            }
+            enableButton(playAgainButton);
         });
 
         socket.on('game_ended', function(data) {
             updateSessionState(data);
             drawLines();
-            showElement(startGameButton);
+            enableButton(startGameButton);
         });
 
         socket.on('state_updated', function(data) {
@@ -240,7 +249,7 @@
                 throw new Error('Request failed');
               })
               .then(function(data) {
-                showElement(statsBox);
+                showElement(statsBox, 'flex');
                 populateTable(data);
                 setTimeout(function() {
                   hideElement(statsBox);

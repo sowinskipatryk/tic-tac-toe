@@ -96,8 +96,7 @@ def is_draw():
 def handle_connect():
     print('Client connected')
     session['player_id'] = str(uuid.uuid4())
-    session['credits'] = 10
-    emit('connected', {'player_id': session['player_id'], 'credits': session['credits']})
+    emit('connected', {'player_id': session['player_id']})
 
 
 @socketio.on('disconnect')
