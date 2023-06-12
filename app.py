@@ -1,6 +1,7 @@
 import random
 import time
 import uuid
+from datetime import datetime, date, timedelta
 from creds import db_username, db_password, db_host, db_name, app_secret_key
 from flask import Flask, jsonify, render_template, session
 from flask_socketio import SocketIO, emit
@@ -23,6 +24,16 @@ def is_opponents_turn():
         return True
 
 
+def save_session_data_to_db():
+    session_data = GameStats(player_id=session['player_id'],
+                             wins=session['wins'],
+                             draws=session['draws'],
+                             losses=session['losses'],
+                             games_length=timedelta(seconds=session['time']))
+    db.session.add(session_data)
+    db.session.commit()
+
+
 def opponents_move():
     print('Opponents move')
     emit('state_updated', {'message': 'Opponent\'s move'})
@@ -35,8 +46,7 @@ def opponents_move():
         session['losses'] += 1
         if 0 < session['credits'] < 3:
             session['time'] = time.time() - session['time']
-            print(session['time'])
-            print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
+            save_session_data_to_db()
             emit('game_ended', {'board': session['board'], 'message': 'Opponent won. Game over!', 'credits': session['credits']})
         else:
             emit('round_ended', {'board': session['board'], 'message': 'Opponent won', 'credits': session['credits']})
@@ -44,8 +54,7 @@ def opponents_move():
         session['draws'] += 1
         if 0 < session['credits'] < 3:
             session['time'] = time.time() - session['time']
-            print(session['time'])
-            print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
+            save_session_data_to_db()
             emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
         else:
             emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
@@ -151,8 +160,7 @@ def handle_validate_move(box_id):
             session['draws'] += 1
             if 0 < session['credits'] < 3:
                 session['time'] = time.time() - session['time']
-                print(session['time'])
-                print(f"Stats: {session['wins']}W {session['draws']}D {session['losses']}L")
+                save_session_data_to_db()
                 emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
             else:
                 emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
@@ -170,21 +178,27 @@ def index():
 
 @app.route('/stats', methods=['GET'])
 def view_statistics():
-    total_wins = db.session.query(db.func.sum(GameStats.wins)).scalar()
-    total_loses = db.session.query(db.func.sum(GameStats.loses)).scalar()
-    total_draws = db.session.query(db.func.sum(GameStats.draws)).scalar()
-    games_played = db.session.query(db.func.sum(GameStats.games_played)).scalar()
-    games_length = db.session.query(db.func.sum(GameStats.games_length)).scalar()
+    current_date = date.today()
+    start_of_day = datetime.combine(current_date, datetime.min.time())
+    end_of_day = datetime.combine(current_date, datetime.max.time())
 
-    return jsonify({
-        'total_wins': total_wins,
-        'total_loses': total_loses,
-        'total_draws': total_draws,
-        'games_played': games_played,
-        'games_length': games_length,
+    total_wins = db.session.query(db.func.sum(GameStats.wins)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_losses = db.session.query(db.func.sum(GameStats.losses)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_draws = db.session.query(db.func.sum(GameStats.draws)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    games_length = db.session.query(db.func.sum(GameStats.games_length)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+
+    data_out = jsonify({
+        'total_wins': total_wins if total_wins else 0,
+        'total_draws': total_draws if total_draws else 0,
+        'total_losses': total_losses if total_losses else 0,
+        'total_seconds': games_length.total_seconds() if games_length else 0,
     })
+
+    return data_out
 
 
 if __name__ == '__main__':
     from models import GameStats
+    with app.app_context():
+        db.create_all()
     socketio.run(app, allow_unsafe_werkzeug=True)

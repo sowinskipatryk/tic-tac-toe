@@ -43,9 +43,18 @@ h1 {
     cursor: default;
 }
 
-.row {
+.row, .table-row {
     display: flex;
     flex-direction: row;
+}
+
+.cell {
+    width: 100px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px white solid;
 }
 
 .game {
@@ -96,7 +105,7 @@ button:hover {
     padding: 16px;
 }
 
-#turn-box, #credits-box {
+#turn-box, #credits-box, #stats-box {
     display: none;
 }
 
