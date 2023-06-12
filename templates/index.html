@@ -3,11 +3,14 @@
 <head>
     <title>Tic Tac Toe</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@200;400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Tic Tac Toe Game</h1>
+        <h1>Tic Tac Toe</h1>
         <div class="game">
             <div id="credits-box">
                 <span id="credits-text">Credits: </span>
@@ -186,6 +189,7 @@
 
         socket.on('game_started', function(data) {
             hideElement(startGameButton);
+            clearLines();
             updateSessionState(data);
             showElement(gameBoard);
         });

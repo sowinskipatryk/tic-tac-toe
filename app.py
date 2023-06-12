@@ -18,7 +18,6 @@ OPPONENT_SYMBOL = 'O'
 
 
 def is_opponents_turn():
-    print('Is opponents turn')
     random_num = random.random()
     if random_num < 0.5:
         return True
@@ -35,9 +34,8 @@ def save_session_data_to_db():
 
 
 def opponents_move():
-    print('Opponents move')
     emit('state_updated', {'message': 'Opponent\'s move'})
-    time.sleep(2)
+    time.sleep(1.5)
     empty_field_ids = [index for index, value in enumerate(session['board']) if value == '']
     chosen_id = random.choice(empty_field_ids)
     session['board'][chosen_id] = OPPONENT_SYMBOL
@@ -63,7 +61,6 @@ def opponents_move():
 
 
 def game_init():
-    print('Game init')
     session['credits'] -= 3
     session['board'] = ['' for _ in range(9)]
     emit('game_started', {'message': 'Game has started', 'credits': session['credits'], 'board': session['board']})
@@ -75,7 +72,6 @@ def game_init():
 
 
 def is_winner():
-    print('Winner check')
     for x in range(0, 9, 3):
         if session['board'][x] != '' and session['board'][x] == session['board'][x+1] == session['board'][x+2]:
             return True
@@ -92,7 +88,6 @@ def is_winner():
 
 
 def is_draw():
-    print('Draw check')
     if all(value != "" for value in session['board']):
         return True
 
@@ -112,7 +107,6 @@ def handle_disconnect():
 
 @socketio.on('start_game')
 def handle_start_game():
-    print('Handle start game')
     session['credits'] = 10
     session['wins'] = 0
     session['draws'] = 0
@@ -123,7 +117,6 @@ def handle_start_game():
 
 @socketio.on('play_again')
 def handle_play_again():
-    print('Handle play again')
     if session['credits'] == 0:
         emit('state_updated', {'message': 'Add more credits to continue playing'})
     elif 0 < session['credits'] < 3:
@@ -135,7 +128,6 @@ def handle_play_again():
 
 @socketio.on('add_credits')
 def handle_add_credits():
-    print('Handle add credits')
     if session['credits'] == 0:
         session['credits'] += 10
         emit('state_updated', {'message': 'Extra credits have been added', 'credits': session['credits']})
@@ -145,7 +137,6 @@ def handle_add_credits():
 
 @socketio.on('validate_move')
 def handle_validate_move(box_id):
-    print('Handle validate move')
     box_id = int(box_id)
     if session['board'][box_id] == '':
         session['board'][box_id] = PLAYER_SYMBOL
@@ -177,7 +168,7 @@ def index():
 
 
 @app.route('/stats', methods=['GET'])
-def view_statistics():
+def view_stats():
     current_date = date.today()
     start_of_day = datetime.combine(current_date, datetime.min.time())
     end_of_day = datetime.combine(current_date, datetime.max.time())
@@ -185,13 +176,21 @@ def view_statistics():
     total_wins = db.session.query(db.func.sum(GameStats.wins)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
     total_losses = db.session.query(db.func.sum(GameStats.losses)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
     total_draws = db.session.query(db.func.sum(GameStats.draws)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
-    games_length = db.session.query(db.func.sum(GameStats.games_length)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_time = db.session.query(db.func.sum(GameStats.games_length)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+
+    if total_time:
+        total_seconds = total_time.total_seconds()
+        rounded_seconds = round(total_seconds)
+        rounded_delta = timedelta(seconds=rounded_seconds)
+        total_time = str(rounded_delta)
+    else:
+        total_time = '0:00:00'
 
     data_out = jsonify({
         'total_wins': total_wins if total_wins else 0,
         'total_draws': total_draws if total_draws else 0,
         'total_losses': total_losses if total_losses else 0,
-        'total_seconds': games_length.total_seconds() if games_length else 0,
+        'total_seconds': total_time,
     })
 
     return data_out
