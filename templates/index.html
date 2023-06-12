@@ -10,66 +10,62 @@
 </head>
 <body>
     <div class="container">
-        <h1>Tic Tac Toe</h1>
-        <div class="game">
-            <div id="credits-box">
-                <span id="credits-text">Credits: </span>
-                <span id="credits-amount"></span>
-            </div>
-            <div class="controls">
-            <button id="start-btn">Start New Game</button>
-            <button id="again-btn">Next Round</button>
-            <button id="add-credits-btn">Add Credits</button>
-            <button id="stats-btn">Daily Stats</button>
-            </div>
-            <div id="board">
-                <div class="row">
-                    <div class="box top left" data-id="0"></div>
-                    <div class="box top" data-id="1"></div>
-                    <div class="box top right" data-id="2"></div>
+            <h1>Tic Tac Toe</h1>
+            <div class="game">
+                <div id="board">
+                    <div class="row">
+                        <div class="box top left" data-id="0"></div>
+                        <div class="box top" data-id="1"></div>
+                        <div class="box top right" data-id="2"></div>
+                    </div>
+                    <div class="row">
+                        <div class="box left" data-id="3"></div>
+                        <div class="box" data-id="4"></div>
+                        <div class="box right" data-id="5"></div>
+                    </div>
+                    <div class="row">
+                        <div class="box bottom left" data-id="6"></div>
+                        <div class="box bottom" data-id="7"></div>
+                        <div class="box bottom right" data-id="8"></div>
+                    </div>
                 </div>
-                <div class="row">
-                    <div class="box left" data-id="3"></div>
-                    <div class="box" data-id="4"></div>
-                    <div class="box right" data-id="5"></div>
+                <div id="message"></div>
+                <div id="stats-box">
+                    <div class="table-row">
+                        <div class="cell" id="header-wins">Wins</div>
+                        <div class="cell" id="header-draws">Draws</div>
+                        <div class="cell" id="header-losses">Losses</div>
+                        <div class="cell" id="header-time">Time Played</div>
+                    </div>
+                    <div class="table-row">
+                        <div class="cell" id="data-wins"></div>
+                        <div class="cell" id="data-draws"></div>
+                        <div class="cell" id="data-losses"></div>
+                        <div class="cell" id="data-time"></div>
+                    </div>
                 </div>
-                <div class="row">
-                    <div class="box bottom left" data-id="6"></div>
-                    <div class="box bottom" data-id="7"></div>
-                    <div class="box bottom right" data-id="8"></div>
-                </div>
-            </div>
-            <div id="turn-box">
-                <span id="turn-text">Turn: </span>
-                <span id="turn"></span>
-            </div>
-            <div id="message"></div>
-            <div id="stats-box">
-                <div class="table-row">
-                    <div class="cell" id="header-wins">Wins</div>
-                    <div class="cell" id="header-draws">Draws</div>
-                    <div class="cell" id="header-losses">Losses</div>
-                    <div class="cell" id="header-time">Time Played</div>
-                </div>
-                <div class="table-row">
-                    <div class="cell" id="data-wins"></div>
-                    <div class="cell" id="data-draws"></div>
-                    <div class="cell" id="data-losses"></div>
-                    <div class="cell" id="data-time"></div>
+                <div id="side-panel">
+                    <div id="credits-box">
+                        <span id="credits-text">Credits: </span>
+                        <span id="credits-amount"></span>
+                    </div>
+                    <div class="controls">
+                        <button id="start-btn">Start New Game</button>
+                        <button id="again-btn">Next Round</button>
+                        <button id="add-credits-btn">Add Credits</button>
+                        <button id="stats-btn">Daily Stats</button>
+                    </div>
                 </div>
             </div>
-        </div>
     </div>
     <script>
         const socket = io.connect();
 
         let credits;
-        let turn;
 
         const gameBoard = document.getElementById('board');
         const boxes = document.getElementsByClassName('box');
         const creditsBox = document.getElementById('credits-box');
-        const turnBox = document.getElementById('turn-box');
         const statsBox = document.getElementById('stats-box');
         const startGameButton = document.getElementById('start-btn');
         const playAgainButton = document.getElementById('again-btn');

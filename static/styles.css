@@ -15,6 +15,7 @@ body {
 h1 {
     text-align: center;
     padding: 48px;
+    height: 48px;
 }
 
 .box {
@@ -63,6 +64,7 @@ h1 {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 
 .box.top {
@@ -91,7 +93,7 @@ button:hover {
 }
 
 #board {
-    display: none;
+    display: block;
 }
 
 .controls {
@@ -107,7 +109,7 @@ button:hover {
     padding: 16px;
 }
 
-#turn-box, #credits-box, #stats-box {
+#credits-box, #stats-box {
     display: none;
 }
 
@@ -157,4 +159,12 @@ button:hover {
   position: absolute;
   background-color: white;
   transform: rotate(-90deg);
+}
+
+#side-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    background-color: blue;
 }
