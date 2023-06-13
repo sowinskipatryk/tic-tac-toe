@@ -15,6 +15,7 @@ socketio = SocketIO(app)
 
 PLAYER_SYMBOL = 'X'
 OPPONENT_SYMBOL = 'O'
+AI_DEPTH_LEVEL = 3
 
 
 def is_opponents_turn():
@@ -33,14 +34,72 @@ def save_session_data_to_db():
     db.session.commit()
 
 
+def get_available_positions():
+    return [i for i, value in enumerate(session['board']) if value == '']
+
+
+def make_ai_move():
+    return make_minimax_move(depth=AI_DEPTH_LEVEL)
+
+
+def evaluate_score():
+    if is_winner(OPPONENT_SYMBOL):
+        return 1
+    elif is_winner(PLAYER_SYMBOL):
+        return -1
+    else:
+        return 0
+
+
+def minimax(depth, is_maximizing):
+    if depth == 0 or is_winner(PLAYER_SYMBOL) or is_winner(OPPONENT_SYMBOL):
+        return evaluate_score()
+
+    if is_maximizing:
+        best_score = float('-inf')
+        for position in get_available_positions():
+            session['board'][position] = OPPONENT_SYMBOL
+            score = minimax(depth - 1, False)
+            session['board'][position] = ''
+            best_score = max(score, best_score)
+        return best_score
+    else:
+        best_score = float('inf')
+        for position in get_available_positions():
+            session['board'][position] = PLAYER_SYMBOL
+            score = minimax(depth - 1, True)
+            session['board'][position] = ''
+            best_score = min(score, best_score)
+        return best_score
+
+
+def make_minimax_move(depth):
+    best_score = float('-inf')
+    best_move = None
+    available_positions = get_available_positions()
+    for position in available_positions:
+        session['board'][position] = OPPONENT_SYMBOL
+        score = minimax(depth - 1, False)
+        session['board'][position] = ''
+        if score > best_score:
+            best_score = score
+            best_move = position
+
+    if best_move is None:
+        if available_positions:
+            best_move = random.choice(available_positions)
+
+    return best_move
+
+
 def opponents_move():
     emit('state_updated', {'message': 'Opponent\'s move'})
     time.sleep(1.5)
-    empty_field_ids = [index for index, value in enumerate(session['board']) if value == '']
-    chosen_id = random.choice(empty_field_ids)
+    chosen_id = make_ai_move()
+    print(chosen_id)
     session['board'][chosen_id] = OPPONENT_SYMBOL
 
-    if is_winner():
+    if is_winner(OPPONENT_SYMBOL):
         session['losses'] += 1
         if 0 < session['credits'] < 3:
             session['time'] = time.time() - session['time']
@@ -64,27 +123,25 @@ def game_init():
     session['credits'] -= 3
     session['board'] = ['' for _ in range(9)]
     emit('game_started', {'message': 'Game has started', 'credits': session['credits'], 'board': session['board']})
-
+    time.sleep(1)
     if is_opponents_turn():
         opponents_move()
     else:
         emit('state_updated', {'board': session['board'], 'message': 'Your move', 'unlock': True})
 
 
-def is_winner():
-    for x in range(0, 9, 3):
-        if session['board'][x] != '' and session['board'][x] == session['board'][x+1] == session['board'][x+2]:
+def is_winner(symbol):
+    win_conditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
+    ]
+
+    for condition in win_conditions:
+        if all(session['board'][i] == symbol for i in condition):
             return True
 
-    for x in range(3):
-        if session['board'][x] != '' and session['board'][x] == session['board'][x+3] == session['board'][x+6]:
-            return True
-
-    if session['board'][0] != '' and session['board'][0] == session['board'][4] == session['board'][8]:
-        return True
-
-    if session['board'][2] != '' and session['board'][2] == session['board'][4] == session['board'][6]:
-        return True
+    return False
 
 
 def is_draw():
@@ -142,7 +199,7 @@ def handle_validate_move(box_id):
 
         emit('state_updated', {'board': session['board']})
 
-        if is_winner():
+        if is_winner(PLAYER_SYMBOL):
             session['wins'] += 1
             session['credits'] += 4
             emit('round_ended', {'board': session['board'], 'message': 'You won', 'credits': session['credits']})
@@ -197,6 +254,4 @@ def view_stats():
 
 if __name__ == '__main__':
     from models import GameStats
-    with app.app_context():
-        db.create_all()
     socketio.run(app, allow_unsafe_werkzeug=True)

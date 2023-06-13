@@ -1,5 +1,5 @@
-db_username = 'root'
+db_username = 'postgres'
 db_password = '1234'
 db_host = 'localhost'
-db_name = 'stats'
+db_name = 'TicTacToe'
 app_secret_key = 'knockknock'
