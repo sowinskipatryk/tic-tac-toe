@@ -1,21 +1,30 @@
 import random
 import time
 import uuid
+import os
 from datetime import datetime, date, timedelta
-from creds import db_username, db_password, db_host, db_name, app_secret_key
 from flask import Flask, jsonify, render_template, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 
+db_host = os.environ['POSTGRES_HOST']
+db_port = os.environ['POSTGRES_PORT']
+db_name = os.environ['POSTGRES_DB']
+db_username = os.environ['POSTGRES_USER']
+db_password = os.environ['POSTGRES_PASSWORD']
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_username}:{db_password}@{db_host}/{db_name}'
-app.secret_key = app_secret_key
+app.config[
+    'SQLALCHEMY_DATABASE_URI'] = f'postgresql://{db_username}:{db_password}@{db_host}:{db_port}/{db_name}'
+app.secret_key = os.environ.get('SECRET_KEY', '1234')
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
+from models import GameStats
+
 PLAYER_SYMBOL = 'X'
 OPPONENT_SYMBOL = 'O'
-AI_DEPTH_LEVEL = 3
+AI_DEPTH_LEVEL = 3  # cleverness of the opponent, higher = harder game
 
 
 def is_opponents_turn():
@@ -30,6 +39,7 @@ def save_session_data_to_db():
                              draws=session['draws'],
                              losses=session['losses'],
                              games_length=timedelta(seconds=session['time']))
+
     db.session.add(session_data)
     db.session.commit()
 
@@ -93,10 +103,10 @@ def make_minimax_move(depth):
 
 
 def opponents_move():
-    emit('state_updated', {'message': 'Opponent\'s move'})
+    emit('state_updated', {'message': 'Opponent\'s move',
+                           'credits': session['credits']})
     time.sleep(1.5)
     chosen_id = make_ai_move()
-    print(chosen_id)
     session['board'][chosen_id] = OPPONENT_SYMBOL
 
     if is_winner(OPPONENT_SYMBOL):
@@ -104,30 +114,44 @@ def opponents_move():
         if 0 < session['credits'] < 3:
             session['time'] = time.time() - session['time']
             save_session_data_to_db()
-            emit('game_ended', {'board': session['board'], 'message': 'Opponent won. Game over!', 'credits': session['credits']})
+            emit('game_ended', {'board': session['board'],
+                                'message': 'Opponent wins. Game over!',
+                                'credits': session['credits']})
         else:
-            emit('round_ended', {'board': session['board'], 'message': 'Opponent won', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'],
+                                 'message': 'Opponent wins!',
+                                 'credits': session['credits']})
     elif is_draw():
         session['draws'] += 1
         if 0 < session['credits'] < 3:
             session['time'] = time.time() - session['time']
             save_session_data_to_db()
-            emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
+            emit('game_ended', {'board': session['board'],
+                                'message': 'It\'s a draw. Game over!',
+                                'credits': session['credits']})
         else:
-            emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'],
+                                 'message': 'It\'s a draw.',
+                                 'credits': session['credits']})
     else:
-        emit('state_updated', {'board': session['board'], 'message': 'Your move', 'unlock': True})
+        emit('state_updated', {'board': session['board'],
+                               'message': 'Your move',
+                               'unlock': True})
 
 
 def game_init():
-    session['credits'] -= 3
     session['board'] = ['' for _ in range(9)]
-    emit('game_started', {'message': 'Game has started', 'credits': session['credits'], 'board': session['board']})
+    session['credits'] -= 3
+    emit('game_started', {'message': 'Game has started',
+                          'credits': session['credits'],
+                          'board': session['board']})
     time.sleep(1)
     if is_opponents_turn():
         opponents_move()
     else:
-        emit('state_updated', {'board': session['board'], 'message': 'Your move', 'unlock': True})
+        emit('state_updated', {'board': session['board'],
+                               'message': 'Your move',
+                               'unlock': True})
 
 
 def is_winner(symbol):
@@ -174,11 +198,14 @@ def handle_start_game():
 @socketio.on('play_again')
 def handle_play_again():
     if session['credits'] == 0:
-        emit('state_updated', {'message': 'Add more credits to continue playing'})
+        emit('state_updated',
+             {'message': 'Add more credits to continue playing!'})
     elif 0 < session['credits'] < 3:
-        emit('state_updated', {'message': 'Insufficient credits to start another game'})
+        emit('state_updated',
+             {'message': 'Insufficient credits to start another game!'})
     else:
-        emit('playing_again', {'message': 'Another game has started', 'credits': session['credits'], 'board': session['board']})
+        emit('playing_again', {'credits': session['credits'],
+                               'board': session['board']})
         game_init()
 
 
@@ -186,9 +213,10 @@ def handle_play_again():
 def handle_add_credits():
     if session['credits'] == 0:
         session['credits'] += 10
-        emit('state_updated', {'message': 'Extra credits have been added', 'credits': session['credits']})
+        emit('state_updated', {'message': 'Extra credits have been added!',
+                               'credits': session['credits']})
     else:
-        emit('state_updated', {'message': 'You cannot add more credits'})
+        emit('state_updated', {'message': 'You cannot add more credits!'})
 
 
 @socketio.on('validate_move')
@@ -202,20 +230,27 @@ def handle_validate_move(box_id):
         if is_winner(PLAYER_SYMBOL):
             session['wins'] += 1
             session['credits'] += 4
-            emit('round_ended', {'board': session['board'], 'message': 'You won', 'credits': session['credits']})
+            emit('round_ended', {'board': session['board'],
+                                 'message': 'You win!',
+                                 'credits': session['credits']})
         elif is_draw():
             session['draws'] += 1
             if 0 < session['credits'] < 3:
                 session['time'] = time.time() - session['time']
                 save_session_data_to_db()
-                emit('game_ended', {'board': session['board'], 'message': 'It\'s a draw. Game over!', 'credits': session['credits']})
+                emit('game_ended', {'board': session['board'],
+                                    'message': 'It\'s a draw. Game over!',
+                                    'credits': session['credits']})
             else:
-                emit('round_ended', {'board': session['board'], 'message': 'It\'s a draw', 'credits': session['credits']})
+                emit('round_ended', {'board': session['board'],
+                                     'message': 'It\'s a draw.',
+                                     'credits': session['credits']})
         else:
             opponents_move()
 
     else:
-        emit('state_updated', {'message': 'Wrong move, try another field', 'unlock': True})
+        emit('state_updated', {'message': 'Wrong move, try another field.',
+                               'unlock': True})
 
 
 @app.route('/')
@@ -229,10 +264,14 @@ def view_stats():
     start_of_day = datetime.combine(current_date, datetime.min.time())
     end_of_day = datetime.combine(current_date, datetime.max.time())
 
-    total_wins = db.session.query(db.func.sum(GameStats.wins)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
-    total_losses = db.session.query(db.func.sum(GameStats.losses)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
-    total_draws = db.session.query(db.func.sum(GameStats.draws)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
-    total_time = db.session.query(db.func.sum(GameStats.games_length)).filter(GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_wins = db.session.query(db.func.sum(GameStats.wins)).filter(
+        GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_losses = db.session.query(db.func.sum(GameStats.losses)).filter(
+        GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_draws = db.session.query(db.func.sum(GameStats.draws)).filter(
+        GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
+    total_time = db.session.query(db.func.sum(GameStats.games_length)).filter(
+        GameStats.timestamp.between(start_of_day, end_of_day)).scalar()
 
     if total_time:
         total_seconds = total_time.total_seconds()
@@ -250,8 +289,3 @@ def view_stats():
     })
 
     return data_out
-
-
-if __name__ == '__main__':
-    from models import GameStats
-    socketio.run(app, allow_unsafe_werkzeug=True)
